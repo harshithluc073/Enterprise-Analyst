@@ -4,55 +4,109 @@ from router import get_router_engine
 
 # --- Page Config ---
 st.set_page_config(
-    page_title="Enterprise Conversational Analyst",
-    page_icon="📊",
-    layout="centered"
+    page_title="Enterprise Analyst",
+    page_icon="⚡",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# --- Header ---
-st.title("📊 Enterprise Analyst Agent")
-st.markdown("ask me about **Financial Data** (SQL) or **Strategic Documents** (Vector).")
+# --- Custom CSS for "Pro" UI ---
+st.markdown("""
+<style>
+    /* Main Background */
+    .stApp {
+        background-color: #0E1117;
+    }
+    
+    /* Chat Message Bubbles */
+    .stChatMessage {
+        background-color: transparent;
+        border: none;
+    }
+    
+    /* User Message Style */
+    div[data-testid="stChatMessage"]:nth-child(odd) {
+        background-color: #1E2329;
+        border-left: 5px solid #00ADB5;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 10px;
+    }
+    
+    /* Assistant Message Style */
+    div[data-testid="stChatMessage"]:nth-child(even) {
+        background-color: #262730;
+        border-left: 5px solid #FF2B2B;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 10px;
+    }
+    
+    /* Input Box styling */
+    .stTextInput input {
+        color: white;
+    }
+    
+    /* Sidebar styling */
+    section[data-testid="stSidebar"] {
+        background-color: #161B22;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-# --- Initialize Session State ---
-if "messages" not in st.session_state:
-    st.session_state.messages = [
-        {"role": "assistant", "content": "Hello! I have access to your database and PDF reports. How can I help?"}
-    ]
-
-# --- Cache the Engine ---
-# We cache this so we don't reload the database connection on every message
-@st.cache_resource
+# --- Initialize Engine (Cached) ---
+@st.cache_resource(show_spinner="Booting up Neural Engines...")
 def load_engine():
     return get_router_engine()
 
-try:
-    engine = load_engine()
-except Exception as e:
-    st.error(f"Failed to load engine: {e}")
-    st.stop()
+# --- Sidebar ---
+with st.sidebar:
+    st.image("https://img.icons8.com/fluency/96/bot.png", width=80)
+    st.title("Enterprise Analyst")
+    st.markdown("---")
+    st.markdown("### 🟢 System Status")
+    st.success("SQL Engine: **Online**")
+    st.success("Vector Database: **Online**")
+    st.markdown("---")
+    st.markdown("### 💡 Example Queries")
+    st.code("Total spend on AWS?", language=None)
+    st.code("Why is Q3 marketing high?", language=None)
+    st.code("List all vendors in IT.", language=None)
+    st.markdown("---")
+    st.markdown("v1.0.0 | Built with LlamaIndex")
 
-# --- Chat Interface ---
-# 1. Display Chat History
+# --- Main Interface ---
+st.title("⚡ Conversational BI Agent")
+st.markdown("##### *Hybrid Retrieval: SQL (Structured) + Vector (Unstructured)*")
+st.divider()
+
+# Initialize Chat History
+if "messages" not in st.session_state:
+    st.session_state.messages = [
+        {"role": "assistant", "content": "Ready. Accessing secure financial data and strategic reports."}
+    ]
+
+# Display Chat History
 for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
+    with st.chat_message(message["role"], avatar="👤" if message["role"] == "user" else "🤖"):
         st.markdown(message["content"])
 
-# 2. Handle User Input
-if prompt := st.chat_input("Ex: 'Total AWS spend?' or 'What is the Q3 strategy?'"):
-    # Add user message to history
+# Handle User Input
+if prompt := st.chat_input("Enter your query here..."):
+    # Add user message
     st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
+    with st.chat_message("user", avatar="👤"):
         st.markdown(prompt)
 
     # Generate Response
-    with st.chat_message("assistant"):
-        with st.spinner("Analyzing..."):
+    with st.chat_message("assistant", avatar="🤖"):
+        with st.spinner("Processing query..."):
             try:
-                # The Router decides SQL vs Vector here
+                engine = load_engine()
                 response = engine.query(prompt)
                 st.markdown(str(response))
-                
-                # Add assistant message to history
                 st.session_state.messages.append({"role": "assistant", "content": str(response)})
             except Exception as e:
-                st.error(f"An error occurred: {e}")
+                error_msg = f"⚠️ System Error: {str(e)}"
+                st.error(error_msg)
+                st.session_state.messages.append({"role": "assistant", "content": error_msg})
