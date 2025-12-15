@@ -95,4 +95,3 @@ Once the app is running, try asking:
 
 ---
 *Developed by [Harshith](https://github.com/harshithluc073)*
-```
